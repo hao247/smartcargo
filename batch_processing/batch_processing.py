@@ -23,23 +23,24 @@ class BatchTransformer:
 
 
     def read_from_s3(self):
-    """
-    read files from s3 bucket and create spark dataframe
-    """
+        """
+        read files from s3 bucket and create spark dataframe
+        """
         s3file = 's3a://{}/{}/{}'.format(self.s3_conf['BUCKET'], self.s3_conf['FOLDER'], self.s3_conf['FILE'])
         
-        self.data = self.spark.read\
+        self.df = self.spark.read\
                 .format('csv')\
                 .option('header', True)\
+                .option('inferSchema', True)\
                 .load(s3file)\
                 .select(list(self.raw_data_fields_conf.keys()))
 
 
     def save_to_psql(self):
-    """
-    save spark dataframe into postgresql though jdbc driver
-    """
-        self.data.write.format('jdbc')\
+        """
+        save spark dataframe into postgresql though jdbc driver
+        """
+        self.df.write.format('jdbc')\
                 .mode(self.psql_conf["mode"])\
                 .option('url', self.psql_conf["url"])\
                 .option('driver', self.psql_conf["driver"])\
@@ -50,15 +51,15 @@ class BatchTransformer:
 
 
     def save_to_psql_2(self):
-    """
-    another way to save spark dataframe into postgresql by psycopg2 module
-    """
+        """
+        another way to save spark dataframe into postgresql by psycopg2 module
+        """
         conn = psycopg2.connect(host=self.psql_conf["host"], database=self.psql_conf["dbname"], user=self.credent["psql_user"], password=self.credent["psql_passwd"])
         cursor = conn.cursor()
 
         keys = self.schema_conf.keys()
         fields = ','.join(i for i in keys)
-        for row in self.data.collect():
+        for row in self.df.collect():
             values = ','.join("\'%s\'"%(row[i]) for i in keys)
             cursor.execute('insert into trips (' + fields +') values(' + values + ')')
 
@@ -68,16 +69,16 @@ class BatchTransformer:
 
 
     def spark_transform(self):
-        self.data = self.data\
+        self.df = self.df\
                 .filter(self.data.MMSI == '564294000')\
                 .orderBy(self.data.BaseDateTime)
-        self.data.show()
+        self.df.show()
 
 
     def run(self):
-    """
-    execute the data pipeline
-    """
+        """
+        execute the data pipeline
+        """
         self.read_from_s3()
         self.spark_transform()
         self.save_to_psql_2()
