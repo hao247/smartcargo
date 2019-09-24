@@ -1,2 +1,2 @@
 dbtable: 'trips'
-mode: 'overwrite'
+mode: 'append'

@@ -1,6 +1,8 @@
 import pyspark
 from pyspark.sql import SparkSession
 import sys
+sys.path.append('../tools/')
+import tools as t
 import yaml
 import psycopg2
 
@@ -34,11 +36,11 @@ class BatchTransformer:
                 .load(s3file)
 
 
-    def save_to_psql(self):
+    def save_to_psql(self, df):
         """
         save spark dataframe into postgresql though jdbc driver
         """
-        self.df.write.format('jdbc')\
+        df.write.format('jdbc')\
                 .option('url', self.credent['psql']["url"])\
                 .option('driver', self.credent['psql']["driver"])\
                 .option('user', self.credent['psql']['user'])\
@@ -48,7 +50,7 @@ class BatchTransformer:
                 .save()
 
 
-    def save_to_psql_2(self):
+    def save_to_psql_2(self, df):
         """
         another way to save spark dataframe into postgresql by psycopg2 module
         """
@@ -67,10 +69,12 @@ class BatchTransformer:
 
 
     def spark_transform(self):
-        self.df = self.df\
-                .filter(self.df.MMSI == 366940480)\
-                .orderBy(self.df.BaseDateTime)
-        self.df.show()
+        ship_list = t.list_mmsi(self.df)
+        print(ship_list)
+        for ship_mmsi in ship_list:
+            print('ship_mmsi: ', ship_mmsi)
+            df_one_ship = t.label_trip(self.df, ship_mmsi)
+            self.save_to_psql(df_one_ship)
 
 
     def run(self):
@@ -79,7 +83,6 @@ class BatchTransformer:
         """
         self.read_from_s3()
         self.spark_transform()
-        self.save_to_psql()
 
 
 def main():
