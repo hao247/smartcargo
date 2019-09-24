@@ -54,11 +54,11 @@ def label_trip(df, mmsi):
             .filter(df.SOG > sog_thres)\
             .withColumn("PrevTime", lag(df.BaseDateTime).over(Window.partitionBy("MMSI").orderBy("BaseDateTime")))
     
-    df = df.withColumn("DeltaTime", unix_timestamp(df1.BaseDateTime) - unix_timestamp(df1.PrevTime))\
+    df = df.withColumn("DeltaTime", unix_timestamp(df.BaseDateTime) - unix_timestamp(df.PrevTime))\
             .withColumn("RowNumber", row_number().over(Window.partitionBy("MMSI").orderBy("BaseDateTime")))\
             .withColumn("TripID", lit(0))
     
-    stop_df = df.filter(df2.DeltaTime > delta_time_thres).select('RowNumber')
+    stop_df = df.filter(df.DeltaTime > delta_time_thres).select('RowNumber')
 
     row_start = 1
     for row in stop_df.collect():

@@ -1,0 +1,2 @@
+dbtable: 'trips'
+mode: 'overwrite'
