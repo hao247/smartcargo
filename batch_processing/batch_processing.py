@@ -3,8 +3,8 @@ from pyspark.sql import SparkSession
 import sys
 sys.path.append('../tools/')
 import tools as t
+from pyspark.sql.types import StructType, StructField, TimestampType, IntegerType, DoubleType, StringType
 import yaml
-import psycopg2
 
 
 class BatchTransformer:
@@ -29,11 +29,26 @@ class BatchTransformer:
         """
         s3file = 's3a://{}/{}/{}'.format(self.s3_conf['bucket'], self.s3_conf['folder'], self.s3_conf['file'])
         
-        self.df = self.spark.read\
-                .format('csv')\
-                .option('header', True)\
-                .option('inferSchema', True)\
-                .load(s3file)
+        schema = StructType([
+            StructField("MMSI", IntegerType(), True),
+            StructField("BaseDateTime", TimestampType(), True),
+            StructField("LAT", DoubleType(), True),
+            StructField("LON", DoubleType(), True),
+            StructField("SOG", DoubleType(), True),
+            StructField("COG", DoubleType(), True),
+            StructField("Heading", DoubleType(), True),
+            StructField("VesselName", StringType(), True),
+            StructField("IMO", StringType(), True),
+            StructField("CallSign", StringType(), True),
+            StructField("VesselType", IntegerType(), True),
+            StructField("Status", StringType(), True),
+            StructField("Length", DoubleType(), True),
+            StructField("Width", DoubleType(), True),
+            StructField("Draft", DoubleType(), True),
+            StructField("Cargo", IntegerType(), True)
+            ])
+
+        self.df = self.spark.read.csv(header=True, schema=schema, path=s3file)
 
 
     def save_to_psql(self, df):
@@ -50,31 +65,10 @@ class BatchTransformer:
                 .save()
 
 
-    def save_to_psql_2(self, df):
-        """
-        another way to save spark dataframe into postgresql by psycopg2 module
-        """
-        conn = psycopg2.connect(host=self.psql_conf["host"], database=self.psql_conf["dbname"], user=self.credent["psql_user"], password=self.credent["psql_passwd"])
-        cursor = conn.cursor()
-
-        keys = self.schema_conf.keys()
-        fields = ','.join(i for i in keys)
-        for row in self.df.collect():
-            values = ','.join("\'%s\'"%(row[i]) for i in keys)
-            cursor.execute('insert into trips (' + fields +') values(' + values + ')')
-
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-
     def spark_transform(self):
-        ship_list = t.list_mmsi(self.df)
-        print(ship_list)
-        for ship_mmsi in ship_list:
-            print('ship_mmsi: ', ship_mmsi)
-            df_one_ship = t.label_trip(self.df, ship_mmsi)
-            self.save_to_psql(df_one_ship)
+        df_with_label = t.label_trip(self.df)
+        trip_df = t.gen_trip_table(df_with_label)
+        trip_df.show(100)
 
 
     def run(self):

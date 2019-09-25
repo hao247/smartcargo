@@ -4,7 +4,7 @@ sys.path.append("../batch_processing/")
 from batch_processing import BatchTransformer
 import gmplot
 from datetime import datetime
-from pyspark.sql.functions import lag, unix_timestamp, udf, row_number, lit, when
+import pyspark.sql.functions as f
 from pyspark.sql.window import Window
 from pyspark.sql.types import IntegerType, BooleanType
 
@@ -58,30 +58,47 @@ def output_trip_route(log, mmsi):
     gmap3.draw('./{}.html'.format(mmsi))
 
 
-def label_trip(df, mmsi):
+def label_trip(df):
     '''
     label different trips for a single ship in a dataframe.
     '''
     sog_thres = 0.1
-    delta_time_thres = 10800  # 3 hours
-    df = df.filter(df.MMSI == mmsi)\
-            .filter(df.SOG > sog_thres)\
-            .withColumn("PrevTime", lag(df.BaseDateTime).over(Window.partitionBy("MMSI").orderBy("BaseDateTime")))
+    delta_time_thres = 21600  # 6 hours
+    df = df.filter(df.SOG > sog_thres)\
+            .withColumn("PrevTime", f.lag(df.BaseDateTime).over(Window.partitionBy("MMSI").orderBy("BaseDateTime")))\
     
-    df = df.withColumn("DeltaTime", unix_timestamp(df.BaseDateTime) - unix_timestamp(df.PrevTime))\
-            .withColumn("RowNumber", row_number().over(Window.partitionBy("MMSI").orderBy("BaseDateTime")))\
-            .withColumn("TripID", lit(0))
-    
-    stop_df = df.filter(df.DeltaTime > delta_time_thres).select('RowNumber')
+    df = df.withColumn("DeltaTime", f.unix_timestamp(df.BaseDateTime) - f.unix_timestamp(df.PrevTime))\
+            .withColumn("RowNumber", f.row_number().over(Window.partitionBy("MMSI").orderBy("BaseDateTime")))
 
-    row_start = 1
-    for row in stop_df.collect():
-        row_end = row['RowNumber'] - 1
-        df = df.withColumn("TripID", when(df.RowNumber >= row_start, hash(str(mmsi)+str(row_start))).otherwise(df.TripID))
-        row_start = row_end + 1
-    df = df.withColumn("TripID", when(df.RowNumber >= row_start, hash(str(mmsi)+str(row_start))).otherwise(df.TripID))
+    df = df.withColumn('TripID', f.when((df.DeltaTime > delta_time_thres) | (f.isnull(df.DeltaTime)), f.hash(df.MMSI + df.RowNumber)).otherwise(f.lit(0)))\
+            .select("MMSI", "BaseDateTime", "LAT", "LON", "SOG", "Cargo", "RowNumber", "TripID")
+   
+    return df
+
+
+def gen_trip_table(df):
+    """
+    generate trip table from a labelled dataframe
+    """
+    loc_diff_thres = 0.01  # degrees in lat/lon, 0.01 is roughly 1km
+    df = df.withColumn('LastRowPrevTrip', f.lag(df.RowNumber).over(Window.partitionBy("MMSI").orderBy("RowNumber")))\
+            .withColumn('LastLATPrevTrip', f.lag(df.LAT).over(Window.partitionBy("MMSI").orderBy("RowNumber")))\
+            .withColumn('LastLONPrevTrip', f.lag(df.LON).over(Window.partitionBy("MMSI").orderBy("RowNumber")))\
+            .withColumn('RowEnd', f.max(df.RowNumber).over(Window.partitionBy("MMSI")))\
+            .withColumn('LAT_END', f.last(df.LAT).over(Window.partitionBy("MMSI")))\
+            .withColumn('LON_END', f.last(df.LON).over(Window.partitionBy("MMSI")))\
+            .filter(df.TripID != 0)
+
+    df = df.withColumn('LastRow', f.lead(df.LastRowPrevTrip).over(Window.partitionBy("MMSI").orderBy("RowNumber")))\
+            .withColumn('LastLAT', f.lead(df.LastLATPrevTrip).over(Window.partitionBy("MMSI").orderBy("RowNumber")))\
+            .withColumn('LastLON', f.lead(df.LastLONPrevTrip).over(Window.partitionBy("MMSI").orderBy("RowNumber")))
+            
+    df = df.withColumn('RowEnd', f.when(~(f.isnull(df.LastRow)), df.LastRow).otherwise(df.RowEnd))\
+            .withColumn('LAT_END', f.when(~(f.isnull(df.LastLAT)), df.LastLAT).otherwise(df.LAT_END))\
+            .withColumn('LON_END', f.when(~(f.isnull(df.LastLON)), df.LastLON).otherwise(df.LON_END))\
+            .select("TripID", "MMSI", f.col("RowNumber").alias("RowStart"), "RowEnd", f.col("LAT").alias("LAT_START"), f.col("LON").alias("LON_START"), "LAT_END", "LON_END")
     
-    df.show(1000)
+    df = df.filter((f.abs(df.LAT_END-df.LAT_START) > loc_diff_thres) & (f.abs(df.LON_END-df.LON_START) > loc_diff_thres))
     return df
 
 
@@ -94,14 +111,7 @@ def main():
     trips = BatchTransformer(s3_configfile, raw_data_fields_configfile, psql_configfile, schema_configfile, credentfile)
     trips.read_from_s3()
     df = trips.df
-    
-    #show_mmsi(df)
-    #log = generate_ship_log(df, 565500000)
-    #output_ship_log(log, 565500000)
-    #output_trip_route(log, 565500000)
-    
-    trip_id = 1
-    label_trip(df, 366940480)
+
 
 if __name__ == '__main__':
     main()
