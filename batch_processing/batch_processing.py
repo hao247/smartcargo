@@ -67,8 +67,10 @@ class BatchTransformer:
 
     def spark_transform(self):
         df_with_label = t.label_trip(self.df)
-        trip_df = t.gen_trip_table(df_with_label)
-        trip_df.show(100)
+        trips_df = t.gen_trip_table(df_with_label)
+        trips_df.show(100)
+        trips_df = t.label_destination(trips_df)
+        trips_df.show(100)
 
 
     def run(self):

@@ -1,12 +1,14 @@
 import sys
 sys.path.append("../batch_processing/")
-
-from batch_processing import BatchTransformer
+#from batch_processing import BatchTransformer
 import gmplot
 from datetime import datetime
 import pyspark.sql.functions as f
+import pyspark.sql.types as t
 from pyspark.sql.window import Window
-from pyspark.sql.types import IntegerType, BooleanType
+import yaml
+import pygeohash as gh
+
 
 
 def list_mmsi(df):
@@ -102,16 +104,37 @@ def gen_trip_table(df):
     return df
 
 
-def main():
-    s3_configfile = '../config/s3bucket.config'
-    raw_data_fields_configfile = '../config/raw_data_fields.config'
-    schema_configfile = '../config/trip_schema.config'
-    psql_configfile = '../config/psql.config'
-    credentfile = '../config/credentials.txt'
-    trips = BatchTransformer(s3_configfile, raw_data_fields_configfile, psql_configfile, schema_configfile, credentfile)
-    trips.read_from_s3()
-    df = trips.df
+def geohash_5(lat, lon):
+    return gh.encode(lat, lon, 5)
 
 
-if __name__ == '__main__':
-    main()
+def hash_port_location(ports):
+    ports_hashed = {}
+    for name in ports.keys():
+        ports_hashed[name] = geohash_5(ports[name]['LAT'], ports[name]['LON'])
+        ports_hashed = dict(zip(ports_hashed.values(), ports_hashed.keys()))
+    return ports_hashed
+
+
+def label_destination(df):
+    ports = yaml.load(open('../config/port_list.yaml', 'r'))
+    ports_hashed = hash_port_location(ports)
+    geohash_5_UDF = f.udf(geohash_5, t.StringType())
+    df = df.withColumn('Destination', geohash_5_UDF(df.LAT_END, df.LON_END))
+    df = df.na.replace(ports_hashed, 'Destination')
+    return df
+
+
+#def main():
+#    s3_configfile = '../config/s3bucket.config'
+#    raw_data_fields_configfile = '../config/raw_data_fields.config'
+#    schema_configfile = '../config/trip_schema.config'
+#    psql_configfile = '../config/psql.config'
+#    credentfile = '../config/credentials.txt'
+#    trips = BatchTransformer(s3_configfile, raw_data_fields_configfile, psql_configfile, schema_configfile, credentfile)
+#    trips.read_from_s3()
+#    df = trips.df
+#
+#
+#if __name__ == '__main__':
+#    main()
