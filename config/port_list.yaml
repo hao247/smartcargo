@@ -1,303 +1,396 @@
 South Louisiana:
     LAT: 30.051
     LON: -90.5
+    RANGE: 0.025
 Houston:
     LAT: 29.6111
     LON: -95.0217
+    RANGE: 0.03
 Newark:
     LAT: 40.68155
     LON: -74.1505
+    RANGE: 0.03
 Beaumont:
     LAT: 30.080502
     LON: -94.087457
+    RANGE: 0.03
 Long Beach:
-    LAT: 33.754185
-    LON: -118.216458
+    LAT: 33.742394
+    LON: -118.199527
+    RANGE: 0.015
 Virginia International Gateway:
     LAT: 36.875970
     LON: -76.349053
+    RANGE: 0.01
 Portsmouth Marine:
     LAT: 36.858113
     LON: -76.325777
+    RANGE: 0.025
 Norfolk International Terminals:
     LAT: 36.919494
     LON: -76.329687
+    RANGE: 0.02
 New Orleans:
     LAT: 29.935570
     LON: -90.058892
+    RANGE: 0.02
 Corpus Christi:
     LAT: 27.812778
     LON: -97.407222
+    RANGE: 0.03
 Greater Baton Rouge:
     LAT: 30.437121
     LON: -91.197151
+    RANGE: 0.04
 Plaquemines:
     LAT: 29.625052
     LON: -89.911989
+    RANGE: 0.15
 Los Angeles:
-    LAT: 33.729186
-    LON: -118.262015
+    LAT: 33.728644
+    LON: -118.261761
+    RANGE: 0.02
 Lake Charles:
     LAT: 30.223074
     LON: -93.266630
+    RANGE: 0.02
 Mobile:
     LAT: 30.712857
     LON: -88.039143
+    RANGE: 0.02
 Texas City:
     LAT: 29.371682
     LON: -94.887769
+    RANGE: 0.03
 Huntington-Tristate:
     LAT: 38.404409
     LON: -82.576617
+    RANGE: 0.02
 Baltimore:
-    LAT: 39.271480
-    LON: -76.577290
+    LAT: 39.246334
+    LON: -76.552771
+    RANGE: 0.04
 Twin Ports of Duluth and Superior:
     LAT: 46.749
     LON: -92.09
+    RANGE: 0.02
 Port Arthur:
     LAT: 29.845053
     LON: -93.950685
+    RANGE: 0.025
 St. Louis and East St. Louis:
     LAT: 38.583242
     LON: -90.211585
+    RANGE: 0.05
 Pittsburgh:
     LAT: 40.445749
     LON: -80.025713
+    RANGE: 0.02
 Pascagoula:
     LAT: 30.346221
     LON: -88.507582
+    RANGE: 0.02
 Tampa Bay:
-    LAT: 27.948243
-    LON: -82.442766
+    LAT: 27.930431
+    LON: -82.441347
+    RANGE: 0.025
 Savannah:
-    LAT: 32.129730
-    LON: -81.138015
+    LAT: 32.108904
+    LON: -81.120941
+    RANGE: 0.03
 Valdez:
     LAT: 61.121714
     LON: -146.326521
+    RANGE: 0.02
 Philadelphia:
     LAT: 39.903027
     LON: -75.130209
+    RANGE: 0.04
 Richmond:
     LAT: 37.917891
     LON: -122.365195
+    RANGE: 0.02
 Portland(Oregon):
     LAT: 45.641754
     LON: -122.747609
+    RANGE: 0.04
 Tacoma:
-    LAT: 47.231417
-    LON: -122.414863
+    LAT: 47.270499
+    LON: -122.412058
+    RANGE: 0.025
 Everglades:
     LAT: 26.085351
     LON: -80.115295
+    RANGE: 0.025
 Seattle:
     LAT: 47.584805
     LON: -122.350756
+    RANGE: 0.02
 Freeport:
     LAT: 28.941453
     LON: -95.328094
+    RANGE: 0.025
 Oakland:
-    LAT: 37.794380
-    LON: -122.284753
+    LAT: 37.806919
+    LON: -122.310218
+    RANGE: 0.03
 Paulsboro:
-    LAT: 39.853995
-    LON: -75.231883
+    LAT: 39.900695
+    LON: -75.132382
+    RANGE: 0.025
 Chaleston:
     LAT: 32.784839
     LON: -79.923118
+    RANGE: 0.025
 Boston:
     LAT: 42.342638
     LON: -71.019233
+    RANGE: 0.015
 Two Harbors:
     LAT: 47.014386
     LON: -91.673889
+    RANGE: 0.015
 Jacksonville:
     LAT: 30.394206
     LON: -81.567352
+    RANGE: 0.02
 Chicago:
     LAT: 41.730813
     LON: -87.534439
+    RANGE: 0.15
 Honolulu:
     LAT: 21.313355
     LON: -157.878390
+    RANGE: 0.02
 Memphis:
     LAT: 35.081546
     LON: -90.113497
+    RANGE: 0.03
 Longview:
     LAT: 46.102259
     LON: -122.955553
+    RANGE: 0.025
 Detroit:
     LAT: 42.262156
     LON: -83.111305
+    RANGE: 0.025
 Indiana-Burns Harbor:
     LAT: 41.643563
     LON: -87.153803
+    RANGE: 0.015
 Portland(Maine):
     LAT: 43.646273
     LON: -70.255429
+    RANGE: 0.15
 Marcus Hook:
     LAT: 39.809134
     LON: -75.412613
+    RANGE: 0.15
 Cincinnati:
     LAT: 39.092763
     LON: -84.527575
+    RANGE: 0.01
 Cleveland:
     LAT: 41.508441
     LON: -81.703197
+    RANGE: 0.01
 Galveston:
-    LAT: 29.309048
-    LON: -94.811731
+    LAT: 29.310795
+    LON: -94.797281
+    RANGE: 0.03
 Albany-Rensselaer:
     LAT: 42.623437
     LON: -73.755055
+    RANGE: 0.15
 Port Lavaca Point Comfort:
     LAT: 28.646734
     LON: -96.560416
+    RANGE: 0.015
 San Juan:
-    LAT: 18.436573
-    LON: -66.096001
+    LAT: 18.442421
+    LON: -66.099021
+    RANGE: 0.025
 Anacortes:
     LAT: 48.508982
     LON: -122.574327
+    RANGE: 0.01
 Kalama:
     LAT: 46.018409
     LON: -122.858424
+    RANGE: 0.03
 Toledo:
     LAT: 41.696328
     LON: -83.460519
+    RANGE: 0.02
 Barbers Point:
     LAT: 21.323500
     LON: -158.115772
+    RANGE: 0.01
 Buffington Harbor:
     LAT: 41.6428
     LON: -87.4158
+    RANGE: 0.01
 New Haven Harbor:
     LAT: 41.294466
     LON: -72.909283
+    RANGE: 0.015
 Burns Waterway Harbor:
     LAT: 41.642503
     LON: -87.154328
+    RANGE: 0.01
 Stoneport:
     LAT: 45.297088
     LON: -83.421027
+    RANGE: 0.005
 Providence:
     LAT: 41.795829
     LON: -71.385199
+    RANGE: 0.015
 St. Clair:
     LAT: 42.955874
     LON: -82.422455
+    RANGE: 0.025
 Miami:
     LAT: 25.767485
     LON: -80.164744
-New Castle:
-    LAT: 39.719462
-    LON: -75.522549
+    RANGE: 0.02
 Wilmington(North Carolina):
     LAT: 34.193451
     LON: -77.955952
+    RANGE: 0.02
 Fourchon:
     LAT: 29.134233
     LON: -90.208317
+    RANGE: 0.025
 Lousville:
     LAT: 38.277988
     LON: -85.714247
+    RANGE: 0.005
 Wilmington(Delaware):
     LAT: 39.719246
     LON: -75.522598
+    RANGE: 0.015
 Mount Vernon:
     LAT: 37.921852
     LON: -87.905519
+    RANGE: 0.03
 Calcite:
     LAT: 45.411969
     LON: -83.783162
-Camden-Gloucester:
-    LAT: 39.883344
-    LON: -75.154286
+    RANGE: 0.005
 Brownsville:
     LAT: 25.956624
     LON: -97.386766
+    RANGE: 0.02
 Victoria:
     LAT: 28.663860
     LON: -96.964547
+    RANGE: 0.005
 Vancouver USA:
     LAT: 45.641960
     LON: -122.737547
+    RANGE: 0.02
 Kaskaskia:
     LAT: 38.015141
     LON: -90.083357
+    RANGE: 0.01
 Silver Bay:
     LAT: 47.281069
     LON: -91.263535
+    RANGE: 0.005
 Ashtabula:
     LAT: 41.908602
     LON: -80.792738
+    RANGE: 0.015
 Conneaut:
     LAT: 41.966466
     LON: -80.548131
+    RANGE: 0.005
 Saint Paul:
     LAT: 44.934714
     LON: -93.049402
+    RANGE: 0.015
 Nikiski:
     LAT: 60.676455
     LON: -151.396160
+    RANGE: 0.01
 Port Inland:
     LAT: 45.968234
     LON: -85.871877
+    RANGE: 0.005
 Escanaba(Michigan):
     LAT: 45.767633
     LON: -87.060041
+    RANGE: 0.005
 Kahului:
     LAT: 20.895074
     LON: -156.467495
+    RANGE: 0.005
 Marblehead:
     LAT: 41.545458
     LON: -82.728876
+    RANGE: 0.005
 Greenville:
     LAT: 33.377936
     LON: -91.090091
+    RANGE: 0.01
 Stockton:
     LAT: 37.952533
     LON: -121.322254
+    RANGE: 0.015
 Morehead City:
     LAT: 34.716593
     LON: -76.702142
+    RANGE: 0.01
 Terrebonne:
     LAT: 29.572968
     LON: -90.710904
+    RANGE: 0.005
 Canaveral:
     LAT: 28.41
     LON: -80.61
+    RANGE: 0.02
 Brunswick:
     LAT: 31.132784
     LON: -81.536290
+    RANGE: 0.005
 Milwaukee:
     LAT: 43.018754
     LON: -87.895693
+    RANGE: 0.01
 Dolomite:
     LAT: 45.982958
     LON: -84.275534
+    RANGE: 0.005
 Sandusky:
     LAT: 41.458178
     LON: -82.731577
+    RANGE: 0.005
 Anchorage:
     LAT: 61.240817
     LON: -149.888672
+    RANGE: 0.01
 Manatee:
     LAT: 27.633644
     LON: -82.561486
+    RANGE: 0.005
 Tulsa Port of Catoosa:
     LAT: 36.235279
     LON: -95.732731
+    RANGE: 0.01
 Portsmouth:
     LAT: 43.109891
     LON: -70.797991
+    RANGE: 0.015
 Nashville:
     LAT: 36.161103
     LON: -86.746710
+    RANGE: 0.015
 Caruthersville:
     LAT: 36.201885
     LON: -89.661311
+    RANGE: 0.005
 Oakland:
-    LAT: 37.795503
-    LON: -122.316991
+    LAT: 37.807861
+    LON: -122.319001
+    RANGE: 0.03

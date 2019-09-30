@@ -1,14 +1,78 @@
 import sys
 sys.path.append("../batch_processing/")
-#from batch_processing import BatchTransformer
 import gmplot
 from datetime import datetime
 import pyspark.sql.functions as f
-import pyspark.sql.types as t
+import pyspark.sql.types as types
 from pyspark.sql.window import Window
 import yaml
 import pygeohash as gh
 
+
+def label_trip(df):
+    '''
+    label different trips for a single ship in a dataframe.
+    '''
+    sog_thres = 0.1
+    diff_time_thres = 28800  # 8 hours
+
+    window = Window.partitionBy("MMSI").orderBy("BaseDateTime")
+    df = df.filter(df.SOG > sog_thres)\
+            .withColumn("PrevTime", f.lag(df.BaseDateTime).over(window))
+    
+    df = df.withColumn("DiffTime", f.unix_timestamp(df.BaseDateTime) - f.unix_timestamp(df.PrevTime))
+
+    df = df.withColumn('TripID', f.when((df.DiffTime > diff_time_thres) | (f.isnull(df.DiffTime)),\
+            f.monotonically_increasing_id()).otherwise(f.lit(None)))\
+            .select("MMSI", "BaseDateTime", "LAT", "LON", "TripID")
+    return df
+
+
+def gen_trip_table(df):
+    """
+    generate trip table from a labelled dataframe
+    """
+    loc_diff_thres = 0.1  # degrees in lat/lon, 0.01 is roughly 1km
+    
+    window = Window.partitionBy("MMSI").orderBy("BaseDateTime")
+    window_desc = Window.partitionBy("MMSI").orderBy(f.desc("BaseDateTime"))
+    lag_labels = ['BaseDateTime', 'LAT', 'LON']
+    lead_labels = ['PREV_BaseDateTime', 'PREV_LAT', 'PREV_LON']
+    
+    df = df.select(*[c for c in df.columns],\
+            *[f.first(f.col(col_name)).over(window_desc).alias(col_name + '_END') for col_name in lag_labels],\
+            *[f.lag(f.col(col_name)).over(window).alias('PREV_' + col_name) for col_name in lag_labels])\
+            .filter(df.TripID.isNotNull())
+    
+    df = df.select(*[c for c in df.columns],\
+            *[f.lead(f.col(col_name)).over(window).alias('LAST_' + col_name) for col_name in lead_labels])
+
+    df = df.withColumn('BaseDateTime_END', f.when(~(f.isnull(df.LAST_PREV_BaseDateTime)), df.LAST_PREV_BaseDateTime).otherwise(df.BaseDateTime_END))\
+            .withColumn('LAT_END', f.when(~(f.isnull(df.LAST_PREV_LAT)), df.LAST_PREV_LAT).otherwise(df.LAT_END))\
+            .withColumn('LON_END', f.when(~(f.isnull(df.LAST_PREV_LON)), df.LAST_PREV_LON).otherwise(df.LON_END))\
+            .select("TripID", "MMSI", f.col("BaseDateTime").alias("TIME_START"), f.col('BaseDateTime_END').alias("TIME_END"),\
+            f.col("LAT").alias("LAT_START"), f.col("LON").alias("LON_START"), "LAT_END", "LON_END")
+    
+    df = df.filter((f.abs(df.LAT_END-df.LAT_START) > loc_diff_thres)\
+            & (f.abs(df.LON_END-df.LON_START) > loc_diff_thres))
+    return df
+
+
+def hash_port_location(ports):
+    ports_hashed = {}
+    for name in ports.keys():
+        ports_hashed[name] = gh.encode(ports[name]['LAT'], ports[name]['LON'], 5)
+        ports_hashed = dict(zip(ports_hashed.values(), ports_hashed.keys()))
+    return ports_hashed
+
+
+def label_destination(df):
+    ports = yaml.load(open('../config/port_list.yaml', 'r'))
+    ports_hashed = hash_port_location(ports)
+    geohash_udf = f.udf(lambda x, y: gh.encode(x, y, 5), types.StringType())
+    df = df.withColumn('DES', geohash_udf(df.LAT_END, df.LON_END))
+    df = df.na.replace(ports_hashed, 'DES')
+    return df
 
 
 def list_mmsi(df):
@@ -60,81 +124,3 @@ def output_trip_route(log, mmsi):
     gmap3.draw('./{}.html'.format(mmsi))
 
 
-def label_trip(df):
-    '''
-    label different trips for a single ship in a dataframe.
-    '''
-    sog_thres = 0.1
-    delta_time_thres = 21600  # 6 hours
-    df = df.filter(df.SOG > sog_thres)\
-            .withColumn("PrevTime", f.lag(df.BaseDateTime).over(Window.partitionBy("MMSI").orderBy("BaseDateTime")))\
-    
-    df = df.withColumn("DeltaTime", f.unix_timestamp(df.BaseDateTime) - f.unix_timestamp(df.PrevTime))\
-            .withColumn("RowNumber", f.row_number().over(Window.partitionBy("MMSI").orderBy("BaseDateTime")))
-
-    df = df.withColumn('TripID', f.when((df.DeltaTime > delta_time_thres) | (f.isnull(df.DeltaTime)), f.hash(df.MMSI + df.RowNumber)).otherwise(f.lit(0)))\
-            .select("MMSI", "BaseDateTime", "LAT", "LON", "SOG", "Cargo", "RowNumber", "TripID")
-   
-    return df
-
-
-def gen_trip_table(df):
-    """
-    generate trip table from a labelled dataframe
-    """
-    loc_diff_thres = 0.01  # degrees in lat/lon, 0.01 is roughly 1km
-    df = df.withColumn('LastRowPrevTrip', f.lag(df.RowNumber).over(Window.partitionBy("MMSI").orderBy("RowNumber")))\
-            .withColumn('LastLATPrevTrip', f.lag(df.LAT).over(Window.partitionBy("MMSI").orderBy("RowNumber")))\
-            .withColumn('LastLONPrevTrip', f.lag(df.LON).over(Window.partitionBy("MMSI").orderBy("RowNumber")))\
-            .withColumn('RowEnd', f.max(df.RowNumber).over(Window.partitionBy("MMSI")))\
-            .withColumn('LAT_END', f.last(df.LAT).over(Window.partitionBy("MMSI")))\
-            .withColumn('LON_END', f.last(df.LON).over(Window.partitionBy("MMSI")))\
-            .filter(df.TripID != 0)
-
-    df = df.withColumn('LastRow', f.lead(df.LastRowPrevTrip).over(Window.partitionBy("MMSI").orderBy("RowNumber")))\
-            .withColumn('LastLAT', f.lead(df.LastLATPrevTrip).over(Window.partitionBy("MMSI").orderBy("RowNumber")))\
-            .withColumn('LastLON', f.lead(df.LastLONPrevTrip).over(Window.partitionBy("MMSI").orderBy("RowNumber")))
-            
-    df = df.withColumn('RowEnd', f.when(~(f.isnull(df.LastRow)), df.LastRow).otherwise(df.RowEnd))\
-            .withColumn('LAT_END', f.when(~(f.isnull(df.LastLAT)), df.LastLAT).otherwise(df.LAT_END))\
-            .withColumn('LON_END', f.when(~(f.isnull(df.LastLON)), df.LastLON).otherwise(df.LON_END))\
-            .select("TripID", "MMSI", f.col("RowNumber").alias("RowStart"), "RowEnd", f.col("LAT").alias("LAT_START"), f.col("LON").alias("LON_START"), "LAT_END", "LON_END")
-    
-    df = df.filter((f.abs(df.LAT_END-df.LAT_START) > loc_diff_thres) & (f.abs(df.LON_END-df.LON_START) > loc_diff_thres))
-    return df
-
-
-def geohash_5(lat, lon):
-    return gh.encode(lat, lon, 5)
-
-
-def hash_port_location(ports):
-    ports_hashed = {}
-    for name in ports.keys():
-        ports_hashed[name] = geohash_5(ports[name]['LAT'], ports[name]['LON'])
-        ports_hashed = dict(zip(ports_hashed.values(), ports_hashed.keys()))
-    return ports_hashed
-
-
-def label_destination(df):
-    ports = yaml.load(open('../config/port_list.yaml', 'r'))
-    ports_hashed = hash_port_location(ports)
-    geohash_5_UDF = f.udf(geohash_5, t.StringType())
-    df = df.withColumn('Destination', geohash_5_UDF(df.LAT_END, df.LON_END))
-    df = df.na.replace(ports_hashed, 'Destination')
-    return df
-
-
-#def main():
-#    s3_configfile = '../config/s3bucket.config'
-#    raw_data_fields_configfile = '../config/raw_data_fields.config'
-#    schema_configfile = '../config/trip_schema.config'
-#    psql_configfile = '../config/psql.config'
-#    credentfile = '../config/credentials.txt'
-#    trips = BatchTransformer(s3_configfile, raw_data_fields_configfile, psql_configfile, schema_configfile, credentfile)
-#    trips.read_from_s3()
-#    df = trips.df
-#
-#
-#if __name__ == '__main__':
-#    main()

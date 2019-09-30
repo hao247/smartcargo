@@ -1,0 +1,23 @@
+ship_info:
+  MMSI: integer
+  VesselName: text
+  IMO: text
+  Length: double precision
+  Width: double precision
+  Draft: double precision
+  Cargo: integer
+trips:
+  TripID: text
+  MMSI: integer
+  TIME_START: timestamp
+  TIME_END: timestamp
+  LAT_START: double precision
+  LAT_END: double precision
+  LON_START: double precision
+  LON_END: double precision
+  DURATION: integer
+trip_log:
+  MMSI: integer
+  BaseDateTime: timestamp
+  LAT: double precision
+  LON: double precision
