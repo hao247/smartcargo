@@ -1,20 +1,20 @@
 import sys
 sys.path.append("../batch_processing/")
-import gmplot
 from datetime import datetime
 import pyspark.sql.functions as f
 import pyspark.sql.types as types
 from pyspark.sql.window import Window
 import yaml
-import pygeohash as gh
+import psycopg2
+import datetime
 
 
 def label_trip(df):
     '''
     label different trips for a single ship in a dataframe.
     '''
-    sog_thres = 0.1
-    diff_time_thres = 28800  # 8 hours
+    sog_thres = 0.2
+    diff_time_thres = 57600 # 16 hours
 
     window = Window.partitionBy("MMSI").orderBy("BaseDateTime")
     df = df.filter(df.SOG > sog_thres)\
@@ -32,7 +32,7 @@ def gen_trip_table(df):
     """
     generate trip table from a labelled dataframe
     """
-    loc_diff_thres = 0.1  # degrees in lat/lon, 0.01 is roughly 1km
+    time_diff_thres = 7200 # trip is longer than 2 hours
     
     window = Window.partitionBy("MMSI").orderBy("BaseDateTime")
     window_desc = Window.partitionBy("MMSI").orderBy(f.desc("BaseDateTime"))
@@ -53,74 +53,73 @@ def gen_trip_table(df):
             .select("TripID", "MMSI", f.col("BaseDateTime").alias("TIME_START"), f.col('BaseDateTime_END').alias("TIME_END"),\
             f.col("LAT").alias("LAT_START"), f.col("LON").alias("LON_START"), "LAT_END", "LON_END")
     
-    df = df.filter((f.abs(df.LAT_END-df.LAT_START) > loc_diff_thres)\
-            & (f.abs(df.LON_END-df.LON_START) > loc_diff_thres))
-    return df
-
-
-def hash_port_location(ports):
-    ports_hashed = {}
-    for name in ports.keys():
-        ports_hashed[name] = gh.encode(ports[name]['LAT'], ports[name]['LON'], 5)
-        ports_hashed = dict(zip(ports_hashed.values(), ports_hashed.keys()))
-    return ports_hashed
-
-
-def label_destination(df):
-    ports = yaml.load(open('../config/port_list.yaml', 'r'))
-    ports_hashed = hash_port_location(ports)
-    geohash_udf = f.udf(lambda x, y: gh.encode(x, y, 5), types.StringType())
-    df = df.withColumn('DES', geohash_udf(df.LAT_END, df.LON_END))
-    df = df.na.replace(ports_hashed, 'DES')
-    return df
-
-
-def list_mmsi(df):
-    '''
-    generate all distinct ship mmsi from a dataframe.
-    '''
-    ships = df.select("MMSI").distinct().collect()
-    ship_list = [row['MMSI'] for row in ships]
-    return ship_list
-
-
-def generate_ship_log(df, mmsi):
-    '''
-    generate a single ship log, for data study only.
-    '''
-    datetime, lat, lon, sog, cog = [], [], [], [], []
-    log = df.filter(df.MMSI == mmsi)\
-            .orderBy('BaseDateTime')
-    for row in log.collect():
-        datetime.append(row['BaseDateTime'])
-        lat.append(row['LAT'])
-        lon.append(row['LON'])
-        sog.append(row['SOG'])
-        cog.append(row['COG'])
+    df = df.filter(f.unix_timestamp(df.TIME_END)-f.unix_timestamp(df.TIME_START) > time_diff_thres)
     
-    log = {'datetime': datetime, 'lat':lat, 'lon':lon, 'sog':sog, 'cog':cog}
-    return log
+    return df
 
 
-def output_ship_log(log, mmsi):
-    '''
-    output a single ship log file, for data study only.
-    '''
-    [datetime, lat, lon, sog, cog] = [log['datetime'], log['lat'], log['lon'], log['sog'], log['cog']]
-    with open('./{}.txt'.format(mmsi), 'w+') as f:
-        for i in range(len(datetime)):
-            f.write('{}, {}, {}, {}, {}\n'\
-                    .format(datetime[i], lat[i], lon[i], sog[i], cog[i]))
+def fetch_from_psql(query):
+    """
+    query data from PostgreSQL database
+    """
+    credent = yaml.load(open('/home/ubuntu/git/smartcargo/config/credentials.yaml', 'r'))
+    conn = psycopg2.connect(\
+            host=credent['psql']['host'],\
+            database=credent['psql']['dbname'],\
+            user=credent['psql']['user'],\
+            password=credent['psql']['passwd'])
+    cursor = conn.cursor()
+    cursor.execute(query)
+    data = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return data
 
 
-def output_trip_route(log, mmsi):
-    '''
-    output a single ship route, for data study only.
-    '''
-    [lat, lon] = [log['lat'], log['lon']]
-    center = [sum(lat)/len(lat), sum(lon)/len(lon)]
-    gmap3 = gmplot.GoogleMapPlotter(center[0], center[1], 5)
-    gmap3.plot(lat, lon, 'red')
-    gmap3.draw('./{}.html'.format(mmsi))
+def send_to_psql(query):
+    """
+    query data from PostgreSQL database
+    """
+    credent = yaml.load(open('/home/ubuntu/git/smartcargo/config/credentials.yaml', 'r'))
+    conn = psycopg2.connect(\
+            host=credent['psql']['host'],\
+            database=credent['psql']['dbname'],\
+            user=credent['psql']['user'],\
+            password=credent['psql']['passwd'])
+    cursor = conn.cursor()
+    cursor.execute(query)
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 
+def label_trips():
+    credent = yaml.load(open('/home/ubuntu/git/smartcargo/config/credentials.yaml', 'r'))
+    conn = psycopg2.connect(\
+            host=credent['psql']['host'],\
+            database=credent['psql']['dbname'],\
+            user=credent['psql']['user'],\
+            password=credent['psql']['passwd'])
+    cursor = conn.cursor()
+    cursor.execute('alter table trips_test add column if not exists departure text')
+    cursor.execute('alter table trips_test add column if not exists arrival text')
+    cursor.execute('alter table trips_test add column if not exists duration double precision')
+    port_list = yaml.load(open('/home/ubuntu/git/smartcargo/config/port_list.yaml', 'r'))
+    trips = fetch_from_psql('select * from trips')
+    for trip in trips:
+        print(trip)
+        [tripid, mmsi, time_start, time_end, lat_start, lat_end, lon_start, lon_end] = trip
+        duration = time_end-time_start
+        duration = duration.total_seconds()/3600
+        port_start = None
+        port_end = None
+        for port in port_list:
+            lat, lon, rang = port_list[port]['LAT'], port_list[port]['LON'], port_list[port]['RANGE']
+            if lat-rang < lat_start < lat+rang and lon-rang < lon_start < lon+rang:
+                port_start = port
+            if lat-rang < lat_end < lat+rang and lon-rang < lon_end < lon+rang:
+                port_end = port
+        cursor.execute('insert into trips_test (tripid, mmsi, time_start, time_end, lat_start, lat_end, lon_start, lon_end, departure, arrival, duration) values (\'{}\', {}, \'{}\', \'{}\', {}, {}, {}, {}, \'{}\', \'{}\', {})'.format(tripid, mmsi, time_start, time_end, lat_start, lat_end, lon_start, lon_end, port_start, port_end, duration))
+    conn.commit()
+    cursor.close()
+    conn.close()

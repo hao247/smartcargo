@@ -66,7 +66,7 @@ class BatchTransformer:
         cursor = conn.cursor()
 
         for table_name in self.schema_conf.keys():
-            fields = ','.join(field + " " + self.schema_conf[table_name][field] for field in self.schema_conf[table_name])
+            fields = ','.join(field + " " + self.schema_conf[table_name]['fields'][field] for field in self.schema_conf[table_name]['order'])
             cursor.execute('create table if not exists {} ({})'.format(table_name, fields))
         
         conn.commit()
@@ -77,7 +77,10 @@ class BatchTransformer:
 
         
     def drop_tables(self):
-        conn = psycopg2.connect(host=self.credent['psql']['host'], database=self.credent['psql']['dbname'], user=self.credent['psql']['user'], password=self.credent['psql']['passwd'])
+        conn = psycopg2.connect(host=self.credent['psql']['host'],\
+                database=self.credent['psql']['dbname'],\
+                user=self.credent['psql']['user'],\
+                password=self.credent['psql']['passwd'])
         cursor = conn.cursor()
         cursor.execute("drop table if exists ship_info, trips")
         cursor.execute("drop table if exists trip_log")
@@ -114,7 +117,7 @@ class BatchTransformer:
         """
         time_start = time.time()
         #self.drop_tables()
-        #self.create_tables()
+        self.create_tables()
         self.read_from_s3()
         self.spark_transform()
         self.save_to_psql(self.ship_info_df, 'ship_info', 'append')
