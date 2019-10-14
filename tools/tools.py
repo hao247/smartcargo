@@ -1,20 +1,19 @@
-import sys
-sys.path.append("../batch_processing/")
 from datetime import datetime
 import pyspark.sql.functions as f
 import pyspark.sql.types as types
 from pyspark.sql.window import Window
 import yaml
-import psycopg2
+import psycopg2 as pg
+import pandas as pd
 import datetime
+import boto3
 
-
-def label_trip(df):
-    '''
-    label different trips for a single ship in a dataframe.
-    '''
-    sog_thres = 0.2
-    diff_time_thres = 57600 # 16 hours
+def group_trips(df):
+    """
+    label different trips in a dataframe.
+    """
+    sog_thres = 0.1
+    diff_time_thres = 10800 # 3 hours
 
     window = Window.partitionBy("MMSI").orderBy("BaseDateTime")
     df = df.filter(df.SOG > sog_thres)\
@@ -30,7 +29,7 @@ def label_trip(df):
 
 def gen_trip_table(df):
     """
-    generate trip table from a labelled dataframe
+    generate trip table from a labeled dataframe
     """
     time_diff_thres = 7200 # trip is longer than 2 hours
     
@@ -58,68 +57,57 @@ def gen_trip_table(df):
     return df
 
 
-def fetch_from_psql(query):
-    """
-    query data from PostgreSQL database
-    """
-    credent = yaml.load(open('/home/ubuntu/git/smartcargo/config/credentials.yaml', 'r'))
-    conn = psycopg2.connect(\
+#def label_ports():
+#    rang = 0.5
+#    ports = pd.read_csv('s3://hao-zheng-databucket/ports/Major_Ports.csv')
+#    credent = yaml.load(open('../config/credentials.yaml', 'r'))
+#    conn = pg.connect(\
+#            host=credent['psql']['host'],\
+#            database=credent['psql']['dbname'],\
+#            user=credent['psql']['user'],\
+#            password=credent['psql']['passwd'])
+#    cursor = conn.cursor()
+#    trips = pd.read_sql_query("select * from trips", con=conn)
+#    ports = pd.read_csv('s3://hao-zheng-databucket/ports/Major_Ports.csv')
+#    trips['duration'] = trips['time_end'] - trips['time_start']
+#    trips['duration'] = trips['duration'].dt.total_seconds() / 3600
+#    trips['departure'] = ''
+#    trips['arrival'] = ''
+#    for index, port in ports.iterrows():
+#        lat = port['Y']
+#        lon = port['X']
+#        lat_bin = [-90, lat-rang, lat+rang, 90]
+#        lon_bin = [-180, lon-rang, lon+rang, 180]
+#        print(lat_bin, lon_bin)
+#        scores = [0, 4, 2]
+#        trips['lat_start_score'] = pd.cut(trips['lat_start'], lat_bin, labels=scores).astype(int)
+#        trips['lon_start_score'] = pd.cut(trips['lon_start'], lon_bin, labels=scores).astype(int)
+#        trips['lat_end_score'] = pd.cut(trips['lat_end'], lat_bin, labels=scores).astype(int)
+#        trips['lon_end_score'] = pd.cut(trips['lon_end'], lon_bin, labels=scores).astype(int)
+#        trips['start_score'] = trips['lat_start_score'] + trips['lon_start_score']
+#        trips['end_score'] = trips['lat_end_score'] + trips['lon_end_score']
+#        total_bin= [-1, 7 ,10]
+#        total_scores = ['', port['PORT_NAME']]
+#        trips['departure_tmp'] = pd.cut(trips['start_score'], total_bin, labels=total_scores).astype(str)
+#        trips['arrival_tmp'] = pd.cut(trips['end_score'], total_bin, labels=total_scores).astype(str)
+#        trips['departure'] = trips['departure'].str.cat(trips['departure_tmp']).str.strip()
+#        trips['arrival'] = trips['arrival'].str.cat(trips['arrival_tmp']).str.strip()
+#    trips.drop(['lat_start_score', 'lon_start_score', 'lat_end_score', 'lon_end_score', 'departure_tmp', 'arrival_tmp', 'start_score', 'end_score'], axis=1)
+#    for index, row in trips.iterrows():
+#        cursor.execute('insert into trips_labeled (tripid, mmsi, time_start, time_end, lat_start, lat_end, lon_start, lon_end, departure, arrival, duration) values (\'{}\', {}, \'{}\', \'{}\', {}, {}, {}, {}, \'{}\', \'{}\', {})'.format(row['tripid'], row['mmsi'], row['time_start'], row['time_end'], row['lat_start'], row['lat_end'], row['lon_start'], row['lon_end'], row['departure'], row['arrival'], row['duration']))
+#        conn.commit()
+
+def label_ships():
+    credent = yaml.load(open('../config/credentials.yaml', 'r'))
+    conn = pg.connect(\
             host=credent['psql']['host'],\
             database=credent['psql']['dbname'],\
             user=credent['psql']['user'],\
             password=credent['psql']['passwd'])
-    cursor = conn.cursor()
-    cursor.execute(query)
-    data = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return data
+    trips = pd.read_sql_query("select * from trips_final", con=conn)
+    ships = pd.read_sql_query('select * from ship_info', con=conn)
+    pd.merge(trips, ships, left_on='mmsi')
+    print(trips)
+    print(ships)
 
 
-def send_to_psql(query):
-    """
-    query data from PostgreSQL database
-    """
-    credent = yaml.load(open('/home/ubuntu/git/smartcargo/config/credentials.yaml', 'r'))
-    conn = psycopg2.connect(\
-            host=credent['psql']['host'],\
-            database=credent['psql']['dbname'],\
-            user=credent['psql']['user'],\
-            password=credent['psql']['passwd'])
-    cursor = conn.cursor()
-    cursor.execute(query)
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-
-def label_trips():
-    credent = yaml.load(open('/home/ubuntu/git/smartcargo/config/credentials.yaml', 'r'))
-    conn = psycopg2.connect(\
-            host=credent['psql']['host'],\
-            database=credent['psql']['dbname'],\
-            user=credent['psql']['user'],\
-            password=credent['psql']['passwd'])
-    cursor = conn.cursor()
-    cursor.execute('alter table trips_test add column if not exists departure text')
-    cursor.execute('alter table trips_test add column if not exists arrival text')
-    cursor.execute('alter table trips_test add column if not exists duration double precision')
-    port_list = yaml.load(open('/home/ubuntu/git/smartcargo/config/port_list.yaml', 'r'))
-    trips = fetch_from_psql('select * from trips')
-    for trip in trips:
-        print(trip)
-        [tripid, mmsi, time_start, time_end, lat_start, lat_end, lon_start, lon_end] = trip
-        duration = time_end-time_start
-        duration = duration.total_seconds()/3600
-        port_start = None
-        port_end = None
-        for port in port_list:
-            lat, lon, rang = port_list[port]['LAT'], port_list[port]['LON'], port_list[port]['RANGE']
-            if lat-rang < lat_start < lat+rang and lon-rang < lon_start < lon+rang:
-                port_start = port
-            if lat-rang < lat_end < lat+rang and lon-rang < lon_end < lon+rang:
-                port_end = port
-        cursor.execute('insert into trips_test (tripid, mmsi, time_start, time_end, lat_start, lat_end, lon_start, lon_end, departure, arrival, duration) values (\'{}\', {}, \'{}\', \'{}\', {}, {}, {}, {}, \'{}\', \'{}\', {})'.format(tripid, mmsi, time_start, time_end, lat_start, lat_end, lon_start, lon_end, port_start, port_end, duration))
-    conn.commit()
-    cursor.close()
-    conn.close()
