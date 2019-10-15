@@ -1,15 +1,16 @@
 import airflow
 from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
+from airflow.operators.email_operator import EmailOperator
 from datetime import datetime, timedelta
-
+from airflow.utils.trigger_rule import TriggerRule
 
 schedule_interval = timedelta(days=1)
 
 default_args = {
     'owner': 'HaoZheng',
     'depends_on_past': False,
-    'start_date': datetime.now() - schedule_interval,
+    'start_date': datetime.now(),
     'email': ['haozheng247@gmail.com'],
     'email_on_failure': True,
     'email_on_retry': True,
@@ -41,9 +42,22 @@ task = BashOperator(
     bash_command='cd /home/ubuntu/git/smartcargo/ ; ./spark-run.sh',
     dag=dag)
 
-task.doc_md = """\
-#### Task Documentation
-Spark Batch processing is scheduled to start every day
-"""
+TaskSuccess = EmailOperator(
+    dag = dag,
+    trigger_rule=TriggerRule.ALL_SUCCESS,
+    task_id='TaskSuccess',
+    to=['haozheng247@gmail.com'],
+    subject="Batch processing is complete",
+    html_content='<h3>Batch processing completed succesfully </h3>')
 
-dag.doc_md = __doc__
+TaskSuccess.set_upstream([task])
+
+TaskFailed = EmailOperator(
+    dag = dag,
+    trigger_rule=TriggerRule.ONE_FAILED,
+    task_id='TaskFailed',
+    to=['haozheng247@gmail.com'],
+    subject="Batch processing task failed",
+    html_content='<h3>Batch processing task failed </h3>')
+
+TaskFailed.set_upstream([task])
