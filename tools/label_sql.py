@@ -26,13 +26,12 @@ def read_csv(bucketname, filename):
     return lines
 
 
-def label_ports(table_name):
+def label_ports(table_name, rang):
     """
     labels trips with startging and ending port names
     :type table_name:   str     name of the trip table stored in postgresql
+    :type rang:         float   range/size of the port in meters
     """
-    time_start = time.time()
-    rang = 2000
     credent = yaml.load(open("../config/credentials.yaml", "r"))
     ports = read_csv("hao-zheng-databucket", "ports/Major_Ports.csv")
     add_columns = "alter table {} add column if not exists departure text, add column if not exists arrival text, add column if not exists duration double precision".format(
@@ -60,5 +59,3 @@ def label_ports(table_name):
     )
     psql.update_psql(drop_columns, credent)
     psql.update_psql(calculate_duration, credent)
-    time_end = time.time()
-    print("Total time:  {}".format(time_end - time_start))

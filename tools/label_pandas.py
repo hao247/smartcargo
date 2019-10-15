@@ -9,13 +9,13 @@ slower than bucketizer method, only for benchmarking
 """
 
 
-def label_ports():
+def label_ports(rang):
     """
     labels trips with starting and ending port names
     automatically reads dataframe from psql table
     and saves to psql after processing
+    :type rang:     float   size/range of the port in degrees
     """
-    rang = 0.05
     credent = yaml.load(open("../config/credentials.yaml", "r"))
     conn = pg.connect(
         host=credent["psql"]["host"],
@@ -74,15 +74,3 @@ def label_ports():
         "end_score",
     ]
     trips.drop(scores, axis=1)
-
-    for index, row in trips.iterrows():
-        command = "insert into trip_labeled (tripid, time_start, time_end, departure, arrival, duration) values ('{}', '{}', '{}', '{}', '{}', {})".format(
-            row["tripid"],
-            row["time_start"],
-            row["time_end"],
-            row["departure"],
-            row["arrival"],
-            row["duration"],
-        )
-        cursor.execute(command)
-        conn.commit()

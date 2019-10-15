@@ -40,7 +40,7 @@ def label_ports(df, rang):
     """
     labels trips with starting and ending port names
     :type df:   spark dataframe     dataframe with latitude and longitude scores
-    :type rang: float               range/size of the port
+    :type rang: float               range/size of the port in degrees
     :rtype:     spark dataframe     dataframe with port names labeled
     """
     ports = pd.read_csv("s3://hao-zheng-databucket/ports/Major_Ports.csv")
