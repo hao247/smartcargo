@@ -9,7 +9,6 @@ import plots as p
 
 
 credent = yaml.load(open('../config/credentials.yaml', 'r'))
-cargo_code = yaml.load(open('../config/cargo_code.yaml', 'r'))
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
@@ -20,11 +19,10 @@ server = app.server
 #####################
 
 def read_pd_df(query):
-    conn = pg.connect(\
-        host=credent['psql']['host'],\
-        database=credent['psql']['dbname'],\
-        user=credent['psql']['user'],\
-        password=credent['psql']['passwd'])
+    conn = pg.connect(host=credent['psql']['host'],
+                      database=credent['psql']['dbname'],
+                      user=credent['psql']['user'],
+                      password=credent['psql']['passwd'])
     df = pd.read_sql_query(query, con=conn)
     conn.close()
     return df
@@ -47,7 +45,9 @@ ports = generate_ports(port_list)
 app.layout = html.Div(children=[
     html.Div([
         html.Div(
-            html.Label(['SmartCargo'],style={'height': 100, 'font-family': 'Helvetica', 'font-weight': 'bold', 'font-size': '300%', 'float': 'left', 'background-color': '#3FAAB9'})    
+            html.Label(['SmartCargo'],style={'height': 100, 'font-family': 'Helvetica',
+                                             'font-weight': 'bold', 'font-size': '300%',
+                                             'float': 'left', 'background-color': '#3FAAB9'})    
         ),
 
         html.Div([
@@ -57,7 +57,8 @@ app.layout = html.Div(children=[
                 options=ports,
                 value='Departure port',
             ),
-        ],style={'width': '35%', 'display': 'inline-block', 'font-size': '150%', 'margin-bottom': 10}),
+        ],style={'width': '35%', 'display': 'inline-block', 'font-size': '150%', 
+                 'margin-bottom': 10}),
         
         html.Div([
             html.P(children='TO'),
@@ -70,7 +71,8 @@ app.layout = html.Div(children=[
                 options=ports,
                 value='Destination port'
             )
-        ],style={'width': '35%', 'display': 'inline-block', 'font-size': '150%', 'margin-bottom': 10}),
+        ],style={'width': '35%', 'display': 'inline-block', 'font-size': '150%',
+                 'margin-bottom': 10}),
     
     ],style={'height': 100, 'text-align': 'center', 'background-color': '#C2E0E4'}),
 
@@ -100,7 +102,8 @@ app.layout = html.Div(children=[
                     )],style={'width': '47%', 'height': '15%', 'display': 'inline-block'}),
             
         ]),
-    ],style={'width': '50%', 'height': '60%', 'display': 'inline-block', 'vertical-align': 'top'}),
+    ],style={'width': '50%', 'height': '60%', 'display': 'inline-block',
+             'vertical-align': 'top'}),
 
     html.Div([
         html.Div([
@@ -128,7 +131,8 @@ app.layout = html.Div(children=[
                 id='destination_port_traffic',  
             ),
         ],style={'width': '47%', 'display': 'inline-block'}),
-    ],style={'width': '50%', 'height': '60%', 'display': 'inline-block', 'vertical-align': 'top'}),
+    ],style={'width': '50%', 'height': '60%', 'display': 'inline-block',
+             'vertical-align': 'top'}),
 
 
 ],style={'text-align': 'center', 'backgroundColor': 'rgb(255,255,255)'})
@@ -144,9 +148,11 @@ app.layout = html.Div(children=[
         [Input('port_start', 'value'),
          Input('port_end', 'value')])
 def show_duration(port_start, port_end):
-    trips_query = "select * from trips_final_1 where departure = '{}' and arrival = '{}'".format(port_start, port_end)
+    trips_query = "select * from trips_final_1 where departure = '{}' \
+                   and arrival = '{}'".format(port_start, port_end)
     trips = read_pd_df(trips_query)
-    return p.generate_histogram(trips.duration, 'Trip Duration', 'Duration (hours)', 'Count')
+    return p.generate_histogram(trips.duration, 'Trip Duration',
+                                'Duration (hours)', 'Count')
 
 
 @app.callback(Output('departure_port_traffic', 'figure'),

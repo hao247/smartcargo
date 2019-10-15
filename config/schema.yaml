@@ -26,3 +26,9 @@ trip_log:
     BaseDateTime: timestamp
     LAT: double precision
     LON: double precision
+port_heat:
+  order: [LAT, LON, PORT]
+  fields: 
+    LAT: double precision
+    LON: double precision
+    PORT: text

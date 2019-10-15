@@ -4,7 +4,19 @@ import time
 import re
 import postgres as psql
 
+"""
+port labeling function by using sql queries
+relatively slow, only for benchmarking
+"""
+
+
 def read_csv(bucketname, filename):
+    """
+    imports and splits csv file
+    :type bucketname:   str     s3 data bucket name
+    :type filename:     str     csv file name
+    :rtype:             list    list of rows in csv file
+    """
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(bucketname)
     obj = bucket.Object(filename)
@@ -15,6 +27,10 @@ def read_csv(bucketname, filename):
 
 
 def label_ports(table_name):
+    """
+    labels trips with startging and ending port names
+    :type table_name:   str     name of the trip table stored in postgresql
+    """
     time_start = time.time()
     rang = 2000
     credent = yaml.load(open('../config/credentials.yaml', 'r'))
