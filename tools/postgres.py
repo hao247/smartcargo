@@ -1,5 +1,6 @@
 import psycopg2 as pg
 
+
 """
 functions for postgresql operations
 """
@@ -11,10 +12,12 @@ def update_psql(query, credent):
     :type query:    str     psql query for updating table
     :type credent:  dict    postgresql credentials
     """
-    conn = pg.connect(host = credent['psql']['host'],
-                      database = credent['psql']['dbname'],
-                      user = credent['psql']['user'],
-                      password = credent['psql']['passwd'])
+    conn = pg.connect(
+        host=credent["psql"]["host"],
+        database=credent["psql"]["dbname"],
+        user=credent["psql"]["user"],
+        password=credent["psql"]["passwd"],
+    )
     cursor = conn.cursor()
     cursor.execute(query)
     conn.commit()
@@ -29,17 +32,19 @@ def fetch_from_psql(query, credent):
     :type credent:  dict    postgresql credentials
     :rtype:         list    list of result tuples
     """
-    conn = pg.connect(host = credent['psql']['host'],
-                      database = credent['psql']['dbname'],
-                      user = credent['psql']['user'],
-                      password = credent['psql']['passwd'])
+    conn = pg.connect(
+        host=credent["psql"]["host"],
+        database=credent["psql"]["dbname"],
+        user=credent["psql"]["user"],
+        password=credent["psql"]["passwd"],
+    )
     cursor = conn.cursor()
     cursor.execute(query)
     data = cursor.fetchall()
     cursor.close()
     conn.close()
     return data
-    
+
 
 def create_tables(table_list, credent):
     """
@@ -52,13 +57,16 @@ def create_tables(table_list, credent):
     :type credent:      dict    postgresql credentials
     """
     for table in table_list.keys():
-        fields = ','.join(field + " " + table_list[table]['fields'][field] 
-                          for field in table_list[table]['order'])
-        query = 'create table if not exists {} ({})'.format(table, fields)
+        fields = ",".join(
+            field + " " + table_list[table]["fields"][field]
+            for field in table_list[table]["order"]
+        )
+        query = "create table if not exists {} ({})".format(table, fields)
         update_psql(query, credent)
-            
-    create_hypertable = "select create_hypertable('trip_log', 'basedatetime',
-                         if_not_exists => TRUE)"
+
+    create_hypertable = (
+        "select create_hypertable('trip_log', 'basedatetime', if_not_exists => TRUE)"
+    )
     update_psql(create_hypertable)
 
 
