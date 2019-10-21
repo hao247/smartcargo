@@ -11,7 +11,7 @@ Base on analyzing historical ship trips from port to port, this project aims to 
 
 
 ## Data Pipeline
-![alt text](https://github.com/hao247/smartcargo/blob/master/img/Data_pipeline.png "SmartCargo Pipeline")
+![alt text](https://github.com/hao247/smartcargo/blob/master/img/Data-pipeline.png "SmartCargo Pipeline")
 
 Historical ship tracking data are ingested from S3 data bucket into Spark, where time series data of each vessel will be sessionized based on its speed. If the speed is below 0.1 knot for over 3 hours, the timeseries will be splitted by the speed gap. The trip information such as starting/ending port and trip duration will be extracted and stored in the trips table in database for front-end queries. The process is automated by using Airflow scheduler.
 
