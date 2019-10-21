@@ -107,10 +107,10 @@ class BatchProcessor:
         """
         execute the data pipeline
         """
-        # psql.create_tables(self.schema_conf, self.credent)
+        psql.create_tables(self.schema_conf, self.credent)
         self.read_from_s3()
         self.spark_transform()
-        # self.save_to_psql(self.ship_info_df, 'ship_info', 'append')
-        # self.save_to_psql(self.trips_df, 'trips', 'append')
-        # self.save_to_psql(self.trip_log_df, 'trip_log', 'append')
-        # self.save_to_psql(self.port_heat_df, 'port_heat', 'overwrite')
+        self.save_to_psql(self.ship_info_df, 'ship_info', 'append')
+        self.save_to_psql(self.trips_df, 'trips', 'append')
+        self.save_to_psql(self.trip_log_df, 'trip_log', 'append')
+        self.save_to_psql(self.port_heat_df, 'port_heat', 'overwrite')

@@ -9,6 +9,7 @@ Due to the growing need of fast and efficient shipping, the estimation of vessel
 
 Base on analyzing historical ship trips from port to port, this project aims to provide a tool for people to better schedule voyage logistics. Once the starting and ending ports are specified, the app will provide statistics of trip duration and port traffic information on a dashboard so that people can perform better estimation of ship arrival and docking time.
 
+
 ## Data Pipeline
 ![alt text](https://github.com/hao247/smartcargo/blob/master/img/Data_pipeline.png "SmartCargo Pipeline")
 
@@ -18,6 +19,40 @@ Historical ship tracking data are ingested from S3 data bucket into Spark, where
   1. [AIS ship tracking data](https://marinecadastre.gov/ais/) from 2015 to 2017 (934 GB in total). This is the main dataset for trip sessionization and ship-type extraction.
 
   2. [US major ports data](https://catalog.data.gov/dataset/major-ports-national) including 150 major ports with their names, locations, imports and outports. This will be used for labeling starting and ending ports of trips.
+
+## Repo directory structure
+
+The directory layout is shown below:
+.
+├──airflow
+│   ├── batch_scheduler.py  # Scheduler for batch processor
+│   └── run_scheduler.sh    # Run scheduler
+├── batch_processor
+│   ├── batch_processor.py  # Data processor by using pyspark
+│   └── run_batch.py        # Run batch processsor
+├── config
+│   ├── credentials.yaml          # Authentication info
+│   ├── credentials.yaml.example
+│   ├── s3_config.yaml            # List of importing files in s3
+│   └── schema.yaml               # Schema stored in psql
+├── dash
+│   ├── app.py    # Web application
+│   └── plots.py  # Plot methods used in WebUI
+├── img
+│   └── Data-pipeline.png
+├── LICENSE 
+├── README.md
+├── requirements.txt
+├── spark-run.sh  # Start spark pipeline
+├── test
+│   ├── benchmark_label_functions.py  # benchmark different labeling methods
+│   └── unit_tests.py                 # unittest of methods in tools.py and label_bucketizer.py
+└── tools
+    ├── label_bucketizer.py  # port identification method by using bucketizer
+    ├── label_pandas.py      # port identification method by using pandas cut
+    ├── label_sql.py         # port identification method by using SQL commands
+    ├── postgres.py          # methods for PostgreSQL IO
+    └── tools.py             # methods for trip identification
 
 ## Environmental Setup
 
@@ -88,7 +123,7 @@ airflow/run_schedule.sh
 on the master node. If there is a failure during the processing, an email will be sent to the email address specified in the credential file, and another job will be scheduled 5 minutes after the failure. The job can be monitored on the Airflow GUI at `http://<spark-cluster master-ip>:8082`.
 
 #### Dash application
-run dash/run_app.sh to start the web server.
+Run `dash/run_app.sh` to start the web server.
 
 #### Testing
-
+The folder `test/` contains unit tests for trip/port identification methods used in this project.
