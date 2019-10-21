@@ -23,6 +23,7 @@ Historical ship tracking data are ingested from S3 data bucket into Spark, where
 ## Repo directory structure
 
 The directory layout is shown below:
+```bash
 .
 ├──airflow
 │   ├── batch_scheduler.py  # Scheduler for batch processor
@@ -53,6 +54,7 @@ The directory layout is shown below:
     ├── label_sql.py         # port identification method by using SQL commands
     ├── postgres.py          # methods for PostgreSQL IO
     └── tools.py             # methods for trip identification
+```
 
 ## Environmental Setup
 
